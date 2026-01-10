@@ -1,7 +1,52 @@
-node_modules
-.DS_Store
+# ===========================
+# PERSONAL FILES — NEVER PUSH
+# ===========================
+docs/MY_REVISION_NOTES.md
+docs/personal/
+*.personal.md
+*.private.md
+
+# Environment variables
 .env
-dist
-build
-coverage
-.vercel
+.env.local
+.env.production
+backend-ts/.env
+backend/.env
+frontend/.env
+
+# Dependencies
+node_modules/
+backend/node_modules/
+backend-ts/node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+build/
+backend-ts/dist/
+
+# Test coverage
+coverage/
+backend-ts/coverage/
+frontend/coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.swp
+
+# AWS / SSH keys — NEVER commit these
+*.pem
+*.key
+id_rsa
+id_ed25519
