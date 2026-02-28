@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        String   @default("buyer")
+  company     String?
+  phone       String?
+  gstNumber   String?
+  street      String?
+  city        String?
+  state       String?
+  pincode     String?
+  country     String?  @default("India")
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  creditLimit Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products       Product[]
+  ordersAsBuyer  Order[]   @relation("BuyerOrders")
+  ordersAsSeller Order[]   @relation("SellerOrders")
+  rfqs           RFQ[]
+}
+
+model Product {
+  id             String      @id @default(uuid())
+  name           String
+  description    String
+  category       String
+  sellerId       String
+  seller         User        @relation(fields: [sellerId], references: [id])
+  basePrice      Float
+  unit           String
+  minOrderQty    Int         @default(1)
+  stock          Int         @default(0)
+  images         String      @default("")
+  specifications String?
+  origin         String?
+  leadTime       Int         @default(7)
+  isActive       Boolean     @default(true)
+  rating         Float       @default(0)
+  reviewCount    Int         @default(0)
+  gstRate        Float       @default(18)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  priceTiers PriceTier[]
+  orderItems OrderItem[]
+}
+
+model PriceTier {
+  id           String  @id @default(uuid())
+  productId    String
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQty       Int
+  maxQty       Int?
+  pricePerUnit Float
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  orderNumber     String   @unique
+  buyerId         String
+  buyer           User     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User     @relation("SellerOrders", fields: [sellerId], references: [id])
+  subtotal        Float
+  gstAmount       Float
+  totalAmount     Float
+  status          String   @default("pending")
+  paymentStatus   String   @default("unpaid")
+  paymentTerms    String   @default("immediate")
+  shippingStreet  String?
+  shippingCity    String?
+  shippingState   String?
+  shippingPincode String?
+  shippingCountry String?  @default("India")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+}
+
+model OrderItem {
+  id           String  @id @default(uuid())
+  orderId      String
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product @relation(fields: [productId], references: [id])
+  quantity     Int
+  pricePerUnit Float
+  unit         String
+  subtotal     Float
+}
+
+model OrderStatusHistory {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String
+  note      String?
+  timestamp DateTime @default(now())
+}
+
+model RFQ {
+  id       String @id @default(uuid())
+  buyerId  String
+  buyer    User   @relation(fields: [buyerId], references: [id])
+  category String
+  quantity Int
+}
