@@ -1,0 +1,53 @@
+name: PR Lint Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-check:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend deps
+        working-directory: backend-ts
+        run: npm ci
+
+      - name: Backend ESLint
+        working-directory: backend-ts
+        run: npm run lint
+        # This step FAILS the PR if ESLint finds issues
+        # Reviewer sees exactly which lines are broken
+
+      - name: Backend TypeScript check
+        working-directory: backend-ts
+        run: npm run typecheck
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Comment on PR if lint fails
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Lint check failed.** Please run `npm run lint:fix` locally and push again.'
+            })
