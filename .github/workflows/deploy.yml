@@ -1,48 +1,65 @@
-name: Deploy to AWS EC2
+name: Deploy to Amazon ECS
 
 on:
   push:
-    branches: [main]  # Only deploy when code merges to main
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: negotiate-ai
+  ECS_SERVICE: negotiate-ai-service
+  ECS_CLUSTER: negotiate-ai-cluster
+  ECS_TASK_DEFINITION: ./task-definition.json
+  CONTAINER_NAME: negotiate-ai-app
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
-    name: Deploy to Production EC2
+    name: Deploy
     runs-on: ubuntu-latest
-    needs: []  # Add 'backend' and 'frontend' job names from ci.yml if you want deploy only after CI passes
+    environment: production
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Deploy via SSH to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}           # EC2 public IP or domain
-          username: ${{ secrets.EC2_USER }}        # e.g., ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}          # Private key (PEM contents)
-          port: 22
-          script: |
-            echo "=== Starting RawMart Deployment ==="
-            
-            # Navigate to project directory (idempotent - -p means no error if exists)
-            mkdir -p /home/ubuntu/rawmart
-            cd /home/ubuntu/rawmart
-            
-            # Pull latest code
-            git pull origin main
-            
-            # Install backend dependencies (ci = clean install, faster in CI)
-            cd backend-ts
-            npm ci --production
-            
-            # Compile TypeScript to JavaScript
-            npm run build
-            
-            # Restart app with PM2 (starts if not running, restarts if running)
-            pm2 describe rawmart > /dev/null 2>&1 && pm2 restart rawmart || pm2 start dist/app.js --name rawmart
-            
-            # Save PM2 process list (survives server reboots)
-            pm2 save
-            
-            echo "=== Deployment Complete ==="
-            pm2 status rawmart
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
