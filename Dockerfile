@@ -14,9 +14,14 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# Generate Prisma Client
+RUN npx prisma generate
+
 RUN npm run build
 
 FROM base AS runner
+# Install curl for health checks
+RUN apk add --no-cache curl
 WORKDIR /app
 
 ENV NODE_ENV production
@@ -31,6 +36,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Copy prisma files for runtime migrations if needed
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 USER nextjs
 
@@ -38,5 +45,7 @@ EXPOSE 3000
 
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
+# Default DB path for SQLite
+ENV DATABASE_URL "file:/app/prisma/dev.db"
 
 CMD ["node", "server.js"]

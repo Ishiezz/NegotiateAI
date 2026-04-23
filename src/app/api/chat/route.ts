@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       reply,
       extractedTerms: Object.keys(extractedTerms).length > 0 ? extractedTerms : null
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }
