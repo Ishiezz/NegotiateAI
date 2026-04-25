@@ -5,31 +5,62 @@ export async function POST(request: Request) {
     const { messages } = await request.json();
     const lastUserMessage = messages[messages.length - 1].content.toLowerCase();
 
-    let reply = "I understand. Could you provide more specifics on the quantity and delivery timeline?";
-    let extractedTerms = {};
+    let reply = "I've noted that. To give you an accurate quote, I'll need to know the specific quantity and your preferred delivery timeline.";
+    let extractedTerms: any = {};
 
-    if (lastUserMessage.includes('copper') || lastUserMessage.includes('steel')) {
-      const isCopper = lastUserMessage.includes('copper');
-      extractedTerms = {
-        material: isCopper ? 'Copper Wire' : 'Steel Beams',
-        quantity: '2 Tonnes',
-        delivery: 'This Friday'
-      };
-      reply = `We can definitely supply the ${isCopper ? 'copper wire' : 'steel beams'} by this Friday. Our standard rate for 2 tonnes is $8,500. Does that align with your budget?`;
-    } else if (lastUserMessage.includes('expensive') || lastUserMessage.includes('price') || lastUserMessage.includes('$')) {
-      reply = "I understand budget is a concern. If you can commit to a monthly order, I could bring the price down to $8,100 per 2 tonnes. How does that sound?";
-      extractedTerms = { targetPrice: '$8,100 (Negotiated)' };
-    } else if (lastUserMessage.includes('deal') || lastUserMessage.includes('accept') || lastUserMessage.includes('yes')) {
-      reply = "Excellent. I will draw up the contract for $8,100 for 2 tonnes delivered by Friday. Thank you for doing business with SteelCorp.";
+    // Material Extraction
+    const materials = [
+      { keywords: ['copper', 'cu'], name: 'Copper Cathodes' },
+      { keywords: ['steel', 'iron', 'beam'], name: 'Structural Steel' },
+      { keywords: ['aluminum', 'al'], name: 'Aluminum Ingots' },
+      { keywords: ['lithium', 'li'], name: 'Lithium Carbonate' },
+      { keywords: ['nickel', 'ni'], name: 'Nickel Pellets' }
+    ];
+
+    for (const mat of materials) {
+      if (mat.keywords.some(k => lastUserMessage.includes(k))) {
+        extractedTerms.material = mat.name;
+        break;
+      }
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Quantity Extraction (e.g. "5 tons", "200kg", "10 units")
+    const qtyMatch = lastUserMessage.match(/(\d+(?:\.\d+)?)\s*(ton|tonne|kg|unit|lb|mt|pound)s?/);
+    if (qtyMatch) {
+      extractedTerms.quantity = `${qtyMatch[1]} ${qtyMatch[2]}${parseFloat(qtyMatch[1]) > 1 ? 's' : ''}`;
+    }
+
+    // Price Negotiation Logic
+    if (extractedTerms.material) {
+      const basePrices: Record<string, string> = {
+        'Copper Cathodes': '$8,450',
+        'Structural Steel': '$1,200',
+        'Aluminum Ingots': '$2,300',
+        'Lithium Carbonate': '$14,000',
+        'Nickel Pellets': '$16,500'
+      };
+      const price = basePrices[extractedTerms.material] || '$5,000';
+      reply = `Understood. For ${extractedTerms.material}, our current market rate is ${price} per metric tonne. Does this volume work for your procurement cycle?`;
+      extractedTerms.targetPrice = price;
+    } else if (lastUserMessage.includes('price') || lastUserMessage.includes('expensive') || lastUserMessage.includes('discount') || lastUserMessage.includes('budget')) {
+      reply = "I understand. For bulk orders or long-term contracts, we can offer a 5-8% discount on the spot price. Would you like to see a tiered pricing proposal?";
+      extractedTerms.targetPrice = "Negotiating (Pending Volume)";
+    } else if (lastUserMessage.includes('urgent') || lastUserMessage.includes('fast') || lastUserMessage.includes('soon') || lastUserMessage.includes('friday')) {
+      reply = "We can prioritize your shipment for an express handling fee, or schedule it for standard delivery by next Tuesday at no extra cost. Which do you prefer?";
+      extractedTerms.delivery = lastUserMessage.includes('friday') ? 'This Friday (Express)' : 'Next Tuesday';
+    } else if (lastUserMessage.includes('deal') || lastUserMessage.includes('accept') || lastUserMessage.includes('confirm') || lastUserMessage.includes('yes')) {
+      reply = "Excellent choice. I've updated the terms. You can now 'Accept & Sign' the agreement in the right panel to finalize the purchase order.";
+    }
+
+    // Simulate AI thinking time
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
 
     return NextResponse.json({ 
       reply,
       extractedTerms: Object.keys(extractedTerms).length > 0 ? extractedTerms : null
     });
-  } catch {
+  } catch (error) {
+    console.error('Chat API Error:', error);
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }

@@ -1,30 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Briefcase, Plus, AlertCircle, Trash2 } from 'lucide-react';
+import { Briefcase, Plus, AlertCircle } from 'lucide-react';
 import { Deal } from '../types';
 
 interface SidebarProps {
   deals: Deal[];
   onNewNegotiation: () => void;
-  onRefreshDeals: () => void;
 }
 
-export function Sidebar({ deals, onNewNegotiation, onRefreshDeals }: SidebarProps) {
-  const handleDeleteDeal = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this deal?')) return;
-
-    try {
-      const response = await fetch(`/api/deals/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        onRefreshDeals();
-      }
-    } catch (error) {
-      console.error('Failed to delete deal:', error);
-    }
-  };
-
+export function Sidebar({ deals, onNewNegotiation }: SidebarProps) {
   return (
     <div className="w-72 bg-slate-950 text-white flex flex-col shadow-2xl z-10">
       <div className="p-6 border-b border-white/10 flex items-center justify-between">
@@ -37,7 +22,7 @@ export function Sidebar({ deals, onNewNegotiation, onRefreshDeals }: SidebarProp
       </div>
 
       <div className="p-4 flex-1 overflow-y-auto">
-        <button 
+        <button
           onClick={onNewNegotiation}
           className="w-full mb-6 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg shadow-indigo-600/20 active:scale-95 group"
         >
@@ -54,20 +39,14 @@ export function Sidebar({ deals, onNewNegotiation, onRefreshDeals }: SidebarProp
             </div>
           ) : (
             deals.map((deal) => (
-              <div key={deal.id} className="bg-white/5 hover:bg-white/10 rounded-xl p-4 cursor-pointer border border-white/5 transition-all duration-200 group relative">
-                <div className="flex justify-between items-start mb-1 pr-6">
-                  <h3 className="font-semibold text-sm text-slate-200 group-hover:text-white transition-colors truncate">{deal.material}</h3>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${deal.status === 'ACCEPTED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+              <div key={deal.id} className="bg-white/5 hover:bg-white/10 rounded-xl p-4 cursor-pointer border border-white/5 transition-all duration-200 group">
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="font-semibold text-sm text-slate-200 group-hover:text-white transition-colors truncate max-w-[120px]">{deal.material}</h3>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${deal.status === 'ACCEPTED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
                     {deal.status}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400">{deal.quantity} • {deal.targetPrice}</p>
-                <button 
-                  onClick={(e) => handleDeleteDeal(e, deal.id)}
-                  className="absolute right-2 bottom-2 p-1.5 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
               </div>
             ))
           )}
