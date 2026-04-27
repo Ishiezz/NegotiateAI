@@ -22,7 +22,13 @@ export default function Home() {
     } catch (error) { console.error('Failed to fetch deals:', error); }
   };
 
-  useEffect(() => { fetchDeals(); }, []);
+  useEffect(() => {
+    const loadDeals = async () => {
+      await fetchDeals();
+    };
+  
+    loadDeals();
+  }, []);
 
   const handleSendMessage = async (content: string) => {
     const userMessage: Message = { role: 'user', content };

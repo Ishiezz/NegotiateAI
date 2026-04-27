@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const lastUserMessage = messages[messages.length - 1].content.toLowerCase();
 
     let reply = "I've noted that. To give you an accurate quote, I'll need to know the specific quantity and your preferred delivery timeline.";
-    let extractedTerms: any = {};
+    const extractedTerms: Record<string, string> = {}
 
     // Material Extraction
     const materials = [
