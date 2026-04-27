@@ -22,7 +22,6 @@ jobs:
   ci:
     name: Build & Validate
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,33 +47,12 @@ jobs:
   deploy:
     name: Deploy
     needs: ci
-    runs-on: ubuntu-latest
-    environment: production
+    runs-on: ubuntu-latest          # ← no environment: production
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Debug AWS Secrets Presence
-        run: |
-          echo "Checking if secrets exist..."
-          
-          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-            echo "AWS_ACCESS_KEY_ID = PRESENT"
-          else
-            echo "AWS_ACCESS_KEY_ID = MISSING"
-          fi
 
-          if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-            echo "AWS_SECRET_ACCESS_KEY = PRESENT"
-          else
-            echo "AWS_SECRET_ACCESS_KEY = MISSING"
-          fi
-
-          if [ -n "${{ secrets.AWS_SESSION_TOKEN }}" ]; then
-            echo "AWS_SESSION_TOKEN = PRESENT"
-          else
-            echo "AWS_SESSION_TOKEN = MISSING"
-          fi
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -95,21 +73,4 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Render Task Definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
-
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
+          docker push $ECR_REGISTRY/$ECR_REPOSITO
