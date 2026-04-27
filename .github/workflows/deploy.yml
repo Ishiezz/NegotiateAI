@@ -54,11 +54,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Debug AWS Secrets Presence
+        run: |
+          echo "Checking if secrets exist..."
+          
+          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "AWS_ACCESS_KEY_ID = PRESENT"
+          else
+            echo "AWS_ACCESS_KEY_ID = MISSING"
+          fi
 
+          if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "AWS_SECRET_ACCESS_KEY = PRESENT"
+          else
+            echo "AWS_SECRET_ACCESS_KEY = MISSING"
+          fi
+
+          if [ -n "${{ secrets.AWS_SESSION_TOKEN }}" ]; then
+            echo "AWS_SESSION_TOKEN = PRESENT"
+          else
+            echo "AWS_SESSION_TOKEN = MISSING"
+          fi
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
